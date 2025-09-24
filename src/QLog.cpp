@@ -3,6 +3,7 @@
 #include <chrono>
 #include <iostream>
 #include <iomanip>
+#include <cstring>
 
 namespace QLog
 {
@@ -81,22 +82,45 @@ void Logger::Log(Level level, std::string message)
     {
         return; // filtered out cheaply
     }
+    // Allocate storage for message text from pool (or heap fallback)
+    const auto size = message.size();
+    BufferPool::Allocation alloc;
+    {
+        std::lock_guard<std::mutex> lk(m_poolMtx);
+        alloc = m_pool.Allocate(size);
+    }
+    std::memcpy(alloc.ptr, message.data(), size);
+
+    Message msg;
+    msg.level = level;
+    if (m_timestampsEnabled.load(std::memory_order_relaxed))
+    {
+        msg.timestamp = std::chrono::system_clock::now();
+    }
+    else
+    {
+        msg.timestamp = std::nullopt;
+    }
+    msg.text = std::string_view(static_cast<const char*>(alloc.ptr), size);
+    msg.storage = alloc.ptr;
+    msg.storageSize = alloc.size;
+    msg.storagePooled = alloc.pooled;
+
     {
         std::lock_guard<std::mutex> lock(m_mtx);
-        if (!m_running.load(std::memory_order_relaxed)) return;
+        if (!m_running.load(std::memory_order_relaxed))
+        {
+            // release allocation and bail
+            ReleaseMessageStorage(msg);
+            return;
+        }
         if (m_capacity != 0 && m_queue.size() >= m_capacity)
         {
             // drop oldest to keep tail recent without blocking
+            ReleaseMessageStorage(m_queue.front());
             m_queue.pop_front();
         }
-        if (m_timestampsEnabled.load(std::memory_order_relaxed))
-        {
-            m_queue.push_back(Message{level, std::chrono::system_clock::now(), std::move(message)});
-        }
-        else
-        {
-            m_queue.push_back(Message{level, std::nullopt, std::move(message)});
-        }
+        m_queue.push_back(std::move(msg));
     }
     m_cv.notify_one();
 }
@@ -143,6 +167,8 @@ void Logger::Worker()
             {
                 // Swallow sink exceptions to keep worker alive
             }
+            // Release any storage used by this message text
+            ReleaseMessageStorage(msg);
             lock.lock();
         }
 

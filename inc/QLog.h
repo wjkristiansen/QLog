@@ -10,8 +10,10 @@
 #include <mutex>
 #include <optional>
 #include <queue>
+#include <deque>
 #include <sstream>
 #include <string>
+#include <string_view>
 #include <thread>
 #include <utility>
 #include <vector>
@@ -36,7 +38,12 @@ struct Message
 {
     Level level{};
     std::optional<std::chrono::system_clock::time_point> timestamp; // present if timestamps enabled
-    std::string text;
+    // Text is a non-owning view into memory managed by Logger's internal pool
+    std::string_view text{};
+    // Storage metadata for releasing memory after sink write
+    void* storage{nullptr};
+    size_t storageSize{0};
+    bool storagePooled{false};
 };
 
 // Abstract sink interface (console, file, custom)
@@ -133,6 +140,81 @@ public:
 private:
     void Worker();
 
+    // Simple fixed-block buffer pool to minimize heap allocations for message text
+    class BufferPool
+    {
+    public:
+        BufferPool(size_t blockSize, size_t blockCount)
+            : m_blockSize(blockSize),
+              m_storage(blockSize * blockCount),
+              m_freeList(blockCount),
+              m_freeCount(blockCount)
+        {
+            for (size_t i = 0; i < blockCount; ++i)
+            {
+                m_freeList[i] = static_cast<std::uint32_t>(i);
+            }
+        }
+
+        struct Allocation
+        {
+            void* ptr{nullptr};
+            size_t size{0};
+            bool pooled{false};
+        };
+
+        Allocation Allocate(size_t n)
+        {
+            if (n <= m_blockSize && m_freeCount > 0)
+            {
+                auto idx = m_freeList[--m_freeCount];
+                return Allocation{ m_storage.data() + static_cast<ptrdiff_t>(idx) * static_cast<ptrdiff_t>(m_blockSize), m_blockSize, true };
+            }
+            // Fallback to heap for large messages
+            char* p = new char[n];
+            return Allocation{ p, n, false };
+        }
+
+        void Deallocate(void* p, size_t /*n*/, bool pooled)
+        {
+            if (!p) return;
+            if (pooled)
+            {
+                char* base = m_storage.data();
+                ptrdiff_t diff = static_cast<char*>(p) - base;
+                if (diff >= 0 && static_cast<size_t>(diff) < m_storage.size())
+                {
+                    auto idx = static_cast<std::uint32_t>(diff / static_cast<ptrdiff_t>(m_blockSize));
+                    m_freeList[m_freeCount++] = idx;
+                }
+            }
+            else
+            {
+                delete[] static_cast<char*>(p);
+            }
+        }
+
+    private:
+        size_t m_blockSize{0};
+        std::vector<char> m_storage;           // contiguous backing storage
+        std::vector<std::uint32_t> m_freeList;  // stack of free block indices
+        size_t m_freeCount{0};
+    };
+
+    // Helper to release any storage held by a message
+    void ReleaseMessageStorage(Message& msg)
+    {
+        if (msg.storage)
+        {
+            std::lock_guard<std::mutex> lk(m_poolMtx);
+            m_pool.Deallocate(msg.storage, msg.storageSize, msg.storagePooled);
+            msg.storage = nullptr;
+            msg.storageSize = 0;
+            msg.storagePooled = false;
+            msg.text = std::string_view{};
+        }
+    }
+
     std::shared_ptr<Sink> m_sink;
 
     mutable std::mutex m_mtx;
@@ -146,6 +228,8 @@ private:
     std::atomic<bool> m_timestampsEnabled{true};
 
     std::thread m_worker;
+    BufferPool m_pool{512, 1024}; // default pool: 1024 blocks of 512 bytes
+    std::mutex m_poolMtx;
 };
 
 // Helper to stringify levels
