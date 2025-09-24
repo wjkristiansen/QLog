@@ -33,6 +33,19 @@ enum class Level : std::uint8_t
     Off
 };
 
+// How Logger triggers a break when threshold is met
+enum class BreakMode : std::uint8_t
+{
+    DebugBreak, // trigger debugger break (__debugbreak/__builtin_trap)
+    Throw       // throw an exception (test-friendly)
+};
+
+// Exception thrown when BreakMode::Throw is active and a break is triggered
+struct BreakException : public std::exception
+{
+    const char* what() const noexcept override { return "QLog break triggered"; }
+};
+
 // Simple log message structure
 struct Message
 {
@@ -119,6 +132,33 @@ public:
     Level GetLevel() const
     {
         return m_level.load(std::memory_order_relaxed);
+    }
+
+    // Optional debug break when logging messages at or above a threshold
+    void SetBreakLevel(Level level)
+    {
+        m_breakLevel.store(level, std::memory_order_relaxed);
+    }
+    Level GetBreakLevel() const
+    {
+        return m_breakLevel.load(std::memory_order_relaxed);
+    }
+    void EnableBreaks(bool enabled)
+    {
+        m_breakEnabled.store(enabled, std::memory_order_relaxed);
+    }
+    bool BreaksEnabled() const
+    {
+        return m_breakEnabled.load(std::memory_order_relaxed);
+    }
+
+    void SetBreakMode(BreakMode mode)
+    {
+        m_breakMode.store(mode, std::memory_order_relaxed);
+    }
+    BreakMode GetBreakMode() const
+    {
+        return m_breakMode.load(std::memory_order_relaxed);
     }
 
     // Timestamp control (on by default)
@@ -223,6 +263,9 @@ private:
     const size_t m_capacity;
 
     std::atomic<Level> m_level;
+    std::atomic<Level> m_breakLevel{Level::Critical};
+    std::atomic<bool> m_breakEnabled{false};
+    std::atomic<BreakMode> m_breakMode{BreakMode::DebugBreak};
     std::atomic<bool> m_running{true};
     std::atomic<bool> m_flushRequested{false};
     std::atomic<bool> m_timestampsEnabled{true};

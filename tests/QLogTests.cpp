@@ -102,3 +102,27 @@ TEST(QLog, TimestampsCanBeDisabled)
     auto firstLine = s.substr(0, firstNewline);
     EXPECT_NE(firstLine.find('['), 0u);
 }
+
+TEST(QLog, BreaksCanThrowForTesting)
+{
+    std::ostringstream oss;
+    auto sink = std::make_shared<QLog::OStreamSink>(oss);
+    QLog::Logger logger{sink, QLog::Level::Trace};
+
+    logger.SetBreakLevel(QLog::Level::Error);
+    logger.SetBreakMode(QLog::BreakMode::Throw);
+    logger.EnableBreaks(true);
+
+    // Below threshold: no throw
+    EXPECT_NO_THROW(logger.Warn("warn no break"));
+    // At/above threshold: throws BreakException
+    EXPECT_THROW(logger.Error("boom"), QLog::BreakException);
+
+    // Ensure normal logging still works after exception
+    logger.EnableBreaks(false);
+    logger.Error("after");
+    logger.Flush();
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    auto s = oss.str();
+    EXPECT_NE(s.find("ERROR: after"), std::string::npos);
+}

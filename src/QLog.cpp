@@ -4,9 +4,29 @@
 #include <iostream>
 #include <iomanip>
 #include <cstring>
+#include <csignal>
 
 namespace QLog
 {
+
+namespace
+{
+    inline void DebugBreakNow()
+    {
+#if defined(_MSC_VER)
+    __debugbreak();
+#elif defined(__GNUC__) || defined(__clang__)
+    __builtin_trap();
+#else
+    // As a fallback, raise SIGTRAP where available
+#  ifdef SIGTRAP
+    std::raise(SIGTRAP);
+#  else
+    // no-op
+#  endif
+#endif
+    }
+}
 
 const char* ToString(Level level) noexcept
 {
@@ -81,6 +101,18 @@ void Logger::Log(Level level, std::string message)
     if (level < m_level.load(std::memory_order_relaxed))
     {
         return; // filtered out cheaply
+    }
+    // Optional debug break if configured
+    if (m_breakEnabled.load(std::memory_order_relaxed) && level >= m_breakLevel.load(std::memory_order_relaxed))
+    {
+        if (m_breakMode.load(std::memory_order_relaxed) == BreakMode::Throw)
+        {
+            throw BreakException{};
+        }
+        else
+        {
+            DebugBreakNow();
+        }
     }
     // Allocate storage for message text from pool (or heap fallback)
     const auto size = message.size();
