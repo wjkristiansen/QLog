@@ -1,0 +1,53 @@
+# Editors/IDEs
+.vscode/
+.idea/
+
+# CMake build directories and artifacts
+build/
+build*/
+cmake-build-*/
+CMakeFiles/
+CMakeCache.txt
+CTestTestfile.cmake
+cmake_install.cmake
+install_manifest.txt
+Testing/
+_deps/
+
+# Common output dirs
+bin/
+lib/
+out/
+Release/
+Debug/
+x64/
+x86/
+
+# Visual Studio/MSBuild generated files (when not using out-of-source builds)
+*.sln
+*.vcxproj*
+*.vs/
+*.user
+*.filters
+
+# Compiled binaries and intermediates
+*.exe
+*.dll
+*.lib
+*.pdb
+*.ilk
+*.exp
+*.obj
+*.o
+*.a
+*.so
+*.dylib
+*.pch
+*.ipch
+
+# Logs and misc
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
