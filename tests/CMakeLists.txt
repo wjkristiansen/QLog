@@ -3,8 +3,9 @@ include(FetchContent)
 # Fetch GoogleTest
 set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 FetchContent_Declare(
-  googletest
-  URL https://github.com/google/googletest/archive/refs/tags/v1.14.0.zip
+    googletest
+    URL https://github.com/google/googletest/archive/refs/tags/v1.14.0.zip
+    DOWNLOAD_EXTRACT_TIMESTAMP TRUE  # Avoid CMP0135 warning: use extraction time for fetched archive
 )
 # For Windows: Prevent overriding the parent project's compiler/linker settings
 set(gtest_disable_pthreads OFF)
