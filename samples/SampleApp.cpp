@@ -20,10 +20,11 @@ int main()
     logger.Info("timestamps enabled again");
 
     // Spawn a few threads to produce logs concurrently
-    std::vector<std::jthread> threads;
+    std::vector<std::thread> threads;
+    threads.reserve(3);
     for (int i = 0; i < 3; ++i)
     {
-        threads.emplace_back([i, &logger]
+        threads.emplace_back([i, &logger]()
         {
             for (int n = 0; n < 5; ++n)
             {
@@ -31,6 +32,13 @@ int main()
                 std::this_thread::sleep_for(std::chrono::milliseconds(10));
             }
         });
+    }
+
+    // Join threads explicitly
+    for (auto &t : threads)
+    {
+        if (t.joinable())
+            t.join();
     }
 
     // Flush and shutdown
