@@ -103,6 +103,28 @@ TEST(QLog, TimestampsCanBeDisabled)
     EXPECT_NE(firstLine.find('['), 0u);
 }
 
+TEST(QLog, PrintfStyleFormatting)
+{
+    std::ostringstream oss;
+    auto sink = std::make_shared<QLog::OStreamSink>(oss);
+    QLog::Logger logger{sink, QLog::Level::Info};
+
+    // Test basic formatting
+    logger.Info("User %s logged in with ID %d", "alice", 123);
+    logger.Warn("Processing %d items at %.2f MB/s", 42, 15.75);
+    
+    // Test level filtering - this should not appear since Debug < Info
+    logger.Debug("This debug message with %s should be filtered", "args");
+    
+    logger.Flush();
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+
+    auto s = oss.str();
+    EXPECT_NE(s.find("] INFO: User alice logged in with ID 123"), std::string::npos);
+    EXPECT_NE(s.find("] WARN: Processing 42 items at 15.75 MB/s"), std::string::npos);
+    EXPECT_EQ(s.find("DEBUG"), std::string::npos); // Debug message should be filtered
+}
+
 TEST(QLog, BreaksCanThrowForTesting)
 {
     std::ostringstream oss;

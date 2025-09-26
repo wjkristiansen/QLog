@@ -4,6 +4,7 @@
 #include <condition_variable>
 #include <chrono>
 #include <cstdint>
+#include <cstdarg>
 #include <functional>
 #include <iosfwd>
 #include <memory>
@@ -94,31 +95,51 @@ public:
 
     // Non-blocking log enqueue; may drop message if below level or queue policy decides
     void Log(Level level, std::string message);
+    void Log(Level level, const char* format, va_list args);
+    void Log(Level level, const char* format, ...);
 
     // Convenience helpers
-    void Trace(std::string message)
+    void Trace(const char* format, ...)
     {
-        Log(Level::Trace, std::move(message));
+        va_list args;
+        va_start(args, format);
+        Log(Level::Trace, format, args);
+        va_end(args);
     }
-    void Debug(std::string message)
+    void Debug(const char* format, ...)
     {
-        Log(Level::Debug, std::move(message));
+        va_list args;
+        va_start(args, format);
+        Log(Level::Debug, format, args);
+        va_end(args);
     }
-    void Info(std::string message)
+    void Info(const char* format, ...)
     {
-        Log(Level::Info, std::move(message));
+        va_list args;
+        va_start(args, format);
+        Log(Level::Info, format, args);
+        va_end(args);
     }
-    void Warn(std::string message)
+    void Warn(const char* format, ...)
     {
-        Log(Level::Warn, std::move(message));
+        va_list args;
+        va_start(args, format);
+        Log(Level::Warn, format, args);
+        va_end(args);
     }
-    void Error(std::string message)
+    void Error(const char* format, ...)
     {
-        Log(Level::Error, std::move(message));
+        va_list args;
+        va_start(args, format);
+        Log(Level::Error, format, args);
+        va_end(args);
     }
-    void Critical(std::string message)
+    void Critical(const char* format, ...)
     {
-        Log(Level::Critical, std::move(message));
+        va_list args;
+        va_start(args, format);
+        Log(Level::Critical, format, args);
+        va_end(args);
     }
 
     // Flushes sink after processing current queue

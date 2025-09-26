@@ -4,6 +4,7 @@
 #include <iostream>
 #include <iomanip>
 #include <cstring>
+#include <cstdarg>
 #include <csignal>
 
 namespace QLog
@@ -98,10 +99,31 @@ void Logger::SetLevel(Level level)
 
 void Logger::Log(Level level, std::string message)
 {
+    Log(level, "%s", message.c_str());
+}
+
+void Logger::Log(Level level, const char* format, va_list args)
+{
     if (level < m_level.load(std::memory_order_relaxed))
     {
         return; // filtered out cheaply
     }
+
+    va_list args_copy;
+    va_copy(args_copy, args);
+    int needed = std::vsnprintf(nullptr, 0, format, args_copy);
+    va_end(args_copy);
+    if (needed < 0)
+    {
+        return;
+    }
+    std::string message(needed + 1, '\0');
+    int len = std::vsnprintf(message.data(), message.size(), format, args);
+    if (len < 0) return;
+    message.resize(len);
+
+    // Now call the std::string Log, but since we're removing it, inline the logic.
+
     // Optional debug break if configured
     if (m_breakEnabled.load(std::memory_order_relaxed) && level >= m_breakLevel.load(std::memory_order_relaxed))
     {
@@ -155,6 +177,14 @@ void Logger::Log(Level level, std::string message)
         m_queue.push_back(std::move(msg));
     }
     m_cv.notify_one();
+}
+
+void Logger::Log(Level level, const char* format, ...)
+{
+    va_list args;
+    va_start(args, format);
+    Log(level, format, args);
+    va_end(args);
 }
 
 void Logger::Flush()

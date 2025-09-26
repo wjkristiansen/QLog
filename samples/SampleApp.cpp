@@ -28,7 +28,7 @@ int main()
         {
             for (int n = 0; n < 5; ++n)
             {
-                logger.Debug(std::string("worker ") + std::to_string(i) + ": message " + std::to_string(n));
+                logger.Debug("worker %d: message %d", i, n);
                 std::this_thread::sleep_for(std::chrono::milliseconds(10));
             }
         });
