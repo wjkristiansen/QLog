@@ -44,33 +44,38 @@ const char* ToString(Level level) noexcept
     }
 }
 
+std::string FormatTimestamp(const Message& message)
+{
+    if (!message.timestamp.has_value()) {
+        return "";
+    }
+
+    const auto tp = *message.timestamp;
+    const auto secs = std::chrono::time_point_cast<std::chrono::seconds>(tp);
+    const auto us = std::chrono::duration_cast<std::chrono::microseconds>(tp - secs).count();
+
+    std::time_t t = std::chrono::system_clock::to_time_t(secs);
+    std::tm tm{};
+#if defined(_WIN32)
+    localtime_s(&tm, &t);
+#else
+    localtime_r(&t, &tm);
+#endif
+    char dateTimeBuf[32];
+    std::snprintf(dateTimeBuf, sizeof(dateTimeBuf), "[%04d-%02d-%02d %02d:%02d:%02d.%06d] ",
+                  tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
+                  tm.tm_hour, tm.tm_min, tm.tm_sec, static_cast<int>(us));
+
+    return std::string(dateTimeBuf);
+}
+
 OStreamSink::OStreamSink(std::ostream& os)
     : m_os(os)
 {}
 
 void OStreamSink::Write(const Message& message)
 {
-    if (message.timestamp.has_value()) {
-        const auto tp = *message.timestamp;
-        const auto secs = std::chrono::time_point_cast<std::chrono::seconds>(tp);
-        const auto us = std::chrono::duration_cast<std::chrono::microseconds>(tp - secs).count();
-
-        std::time_t t = std::chrono::system_clock::to_time_t(secs);
-        std::tm tm{};
-#if defined(_WIN32)
-        localtime_s(&tm, &t);
-#else
-        localtime_r(&t, &tm);
-#endif
-        char dateTimeBuf[32];
-        std::snprintf(dateTimeBuf, sizeof(dateTimeBuf), "%04d-%02d-%02d %02d:%02d:%02d",
-                      tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
-                      tm.tm_hour, tm.tm_min, tm.tm_sec);
-
-        m_os << '[' << dateTimeBuf << '.' << std::setw(6) << std::setfill('0') << us << "] ";
-    }
-
-    m_os << ToString(message.level) << ": " << message.text << '\n';
+    m_os << FormatTimestamp(message) << ToString(message.level) << ": " << message.text << '\n';
 }
 
 void OStreamSink::Flush()

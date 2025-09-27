@@ -44,20 +44,6 @@ TEST(QLog, LevelFiltering)
     EXPECT_NE(s.find("] ERROR: shows"), std::string::npos);
 }
 
-TEST(QLog, PrintfStyleFormatting)
-{
-    std::ostringstream oss;
-    QLog::OStreamSink sink(oss);
-    QLog::Logger logger{sink, QLog::Level::Trace};
-
-    logger.Info("value=%d", 42);
-    logger.Flush();
-    std::this_thread::sleep_for(std::chrono::milliseconds(50));
-
-    auto s = oss.str();
-    EXPECT_NE(s.find("] INFO: value=42"), std::string::npos);
-}
-
 TEST(QLog, BoundedCapacityDropsOldest)
 {
     std::ostringstream oss;
@@ -103,7 +89,7 @@ TEST(QLog, TimestampsCanBeDisabled)
     EXPECT_NE(firstLine.find('['), 0u);
 }
 
-TEST(QLog, PrintfStyleFormatting)
+TEST(QLog, PrintfStyleFormattingAndFiltering)
 {
     std::ostringstream oss;
     QLog::OStreamSink sink(oss);
@@ -147,4 +133,31 @@ TEST(QLog, BreaksCanThrowForTesting)
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
     auto s = oss.str();
     EXPECT_NE(s.find("ERROR: after"), std::string::npos);
+}
+
+TEST(QLog, FormatTimestamp)
+{
+    using namespace std::chrono;
+
+    // Test with no timestamp
+    QLog::Message msg1{QLog::Level::Info, std::nullopt, "test"};
+    EXPECT_EQ(QLog::FormatTimestamp(msg1), "");
+
+    // Test with timestamp (Sep 27, 2024 07:10:15.123456)
+    auto tp = system_clock::time_point{seconds{1727446215} + microseconds{123456}};
+    QLog::Message msg2{QLog::Level::Info, tp, "test"};
+    
+    auto formatted = QLog::FormatTimestamp(msg2);
+    
+    // Should contain expected components
+    EXPECT_NE(formatted.find("["), std::string::npos);  // Opening bracket
+    EXPECT_NE(formatted.find("]"), std::string::npos);  // Closing bracket
+    EXPECT_NE(formatted.find("2024-09-27"), std::string::npos);  // Date
+    EXPECT_NE(formatted.find("07:10:15"), std::string::npos);   // Time
+    EXPECT_NE(formatted.find(".123456"), std::string::npos);    // Microseconds
+    EXPECT_EQ(formatted.back(), ' ');  // Ends with space
+    
+    // Should have expected format: "[2024-09-27 07:10:15.123456] " (29 chars)
+    EXPECT_EQ(formatted.length(), 29u);
+    EXPECT_EQ(formatted, "[2024-09-27 07:10:15.123456] ");
 }

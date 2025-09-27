@@ -297,4 +297,8 @@ private:
 // Helper to stringify levels
 const char* ToString(Level level) noexcept;
 
+// Helper to format timestamp with microsecond precision
+// Returns formatted string like "[2025-09-27 14:30:15.123456] " or empty string if no timestamp
+std::string FormatTimestamp(const Message& message);
+
 } // namespace QLog
