@@ -12,7 +12,6 @@
 #include <optional>
 #include <queue>
 #include <deque>
-#include <sstream>
 #include <string>
 #include <string_view>
 #include <thread>
@@ -94,7 +93,6 @@ public:
     Logger& operator=(const Logger&) = delete;
 
     // Non-blocking log enqueue; may drop message if below level or queue policy decides
-    void Log(Level level, std::string message);
     void Log(Level level, const char* format, va_list args);
     void Log(Level level, const char* format, ...);
 
@@ -299,34 +297,4 @@ private:
 // Helper to stringify levels
 const char* ToString(Level level) noexcept;
 
-// Small stream-style builder that sends to logger on destruction
-class LogLine
-{
-public:
-    LogLine(Logger& logger, Level level)
-        : m_logger(logger), m_level(level)
-    {}
-    ~LogLine();
-
-    template <class T>
-    LogLine& operator<<(T&& v)
-    {
-        m_ss << std::forward<T>(v);
-        return *this;
-    }
-
-private:
-    Logger& m_logger;
-    Level m_level;
-    std::ostringstream m_ss;
-};
-
 } // namespace QLog
-
-// Convenience macros for minimal call overhead
-#define QLOG_TRACE(logger)  ::QLog::LogLine((logger), ::QLog::Level::Trace)
-#define QLOG_DEBUG(logger)  ::QLog::LogLine((logger), ::QLog::Level::Debug)
-#define QLOG_INFO(logger)   ::QLog::LogLine((logger), ::QLog::Level::Info)
-#define QLOG_WARN(logger)   ::QLog::LogLine((logger), ::QLog::Level::Warn)
-#define QLOG_ERROR(logger)  ::QLog::LogLine((logger), ::QLog::Level::Error)
-#define QLOG_CRITICAL(logger) ::QLog::LogLine((logger), ::QLog::Level::Critical)

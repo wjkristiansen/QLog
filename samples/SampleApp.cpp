@@ -10,8 +10,8 @@ int main()
 
     logger.Info("QLog sample app starting...");
 
-    // Log with macros and stream-style API
-    QLOG_INFO(logger) << "pi=" << 3.14159;
+    // Log with printf-style API
+    logger.Info("pi=%.5f", 3.14159);
 
     // Demonstrate timestamp toggle
     logger.EnableTimestamps(false);

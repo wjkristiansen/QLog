@@ -97,11 +97,6 @@ void Logger::SetLevel(Level level)
     m_level.store(level, std::memory_order_relaxed);
 }
 
-void Logger::Log(Level level, std::string message)
-{
-    Log(level, "%s", message.c_str());
-}
-
 void Logger::Log(Level level, const char* format, va_list args)
 {
     if (level < m_level.load(std::memory_order_relaxed))
@@ -255,18 +250,6 @@ void Logger::Worker()
     }
     catch (...)
     {
-    }
-}
-
-LogLine::~LogLine()
-{
-    try
-    {
-        m_logger.Log(m_level, m_ss.str());
-    }
-    catch (...)
-    {
-        // no-throw dtor
     }
 }
 
