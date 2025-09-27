@@ -10,7 +10,7 @@
 TEST(QLog, BasicWriteAndFlush)
 {
     std::ostringstream oss;
-    auto sink = std::make_shared<QLog::OStreamSink>(oss);
+    QLog::OStreamSink sink(oss);
     QLog::Logger logger{sink, QLog::Level::Trace};
 
     logger.Info("hello");
@@ -31,7 +31,7 @@ TEST(QLog, BasicWriteAndFlush)
 TEST(QLog, LevelFiltering)
 {
     std::ostringstream oss;
-    auto sink = std::make_shared<QLog::OStreamSink>(oss);
+    QLog::OStreamSink sink(oss);
     QLog::Logger logger{sink, QLog::Level::Warn};
 
     logger.Info("won't show");
@@ -44,13 +44,13 @@ TEST(QLog, LevelFiltering)
     EXPECT_NE(s.find("] ERROR: shows"), std::string::npos);
 }
 
-TEST(QLog, StreamStyleMacro)
+TEST(QLog, PrintfStyleFormatting)
 {
     std::ostringstream oss;
-    auto sink = std::make_shared<QLog::OStreamSink>(oss);
+    QLog::OStreamSink sink(oss);
     QLog::Logger logger{sink, QLog::Level::Trace};
 
-    QLOG_INFO(logger) << "value=" << 42;
+    logger.Info("value=%d", 42);
     logger.Flush();
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
 
@@ -61,7 +61,7 @@ TEST(QLog, StreamStyleMacro)
 TEST(QLog, BoundedCapacityDropsOldest)
 {
     std::ostringstream oss;
-    auto sink = std::make_shared<QLog::OStreamSink>(oss);
+    QLog::OStreamSink sink(oss);
     QLog::Logger logger{sink, QLog::Level::Trace, 3};
 
     logger.Info("a");
@@ -82,7 +82,7 @@ TEST(QLog, BoundedCapacityDropsOldest)
 TEST(QLog, TimestampsCanBeDisabled)
 {
     std::ostringstream oss;
-    auto sink = std::make_shared<QLog::OStreamSink>(oss);
+    QLog::OStreamSink sink(oss);
     QLog::Logger logger{sink, QLog::Level::Trace};
 
     logger.EnableTimestamps(false);
@@ -106,7 +106,7 @@ TEST(QLog, TimestampsCanBeDisabled)
 TEST(QLog, PrintfStyleFormatting)
 {
     std::ostringstream oss;
-    auto sink = std::make_shared<QLog::OStreamSink>(oss);
+    QLog::OStreamSink sink(oss);
     QLog::Logger logger{sink, QLog::Level::Info};
 
     // Test basic formatting
@@ -128,7 +128,7 @@ TEST(QLog, PrintfStyleFormatting)
 TEST(QLog, BreaksCanThrowForTesting)
 {
     std::ostringstream oss;
-    auto sink = std::make_shared<QLog::OStreamSink>(oss);
+    QLog::OStreamSink sink(oss);
     QLog::Logger logger{sink, QLog::Level::Trace};
 
     logger.SetBreakLevel(QLog::Level::Error);

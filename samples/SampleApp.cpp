@@ -5,7 +5,7 @@
 
 int main()
 {
-    auto sink = std::make_shared<QLog::OStreamSink>(std::clog);
+    QLog::OStreamSink sink(std::clog);
     QLog::Logger logger{sink, QLog::Level::Trace};
 
     logger.Info("QLog sample app starting...");

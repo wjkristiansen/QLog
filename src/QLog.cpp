@@ -78,8 +78,8 @@ void OStreamSink::Flush()
     m_os.flush();
 }
 
-Logger::Logger(std::shared_ptr<Sink> sink, Level initialLevel, size_t capacity)
-    : m_sink(std::move(sink)), m_capacity(capacity), m_level(initialLevel)
+Logger::Logger(Sink& sink, Level initialLevel, size_t capacity)
+    : m_sink(&sink, [](Sink*) {}), m_capacity(capacity), m_level(initialLevel)
 {
     m_worker = std::thread([this]
     {

@@ -84,7 +84,7 @@ class Logger
 {
 public:
     // Ctor starts background thread. If capacity==0, queue is unbounded, else drops oldest when full.
-    explicit Logger(std::shared_ptr<Sink> sink,
+    explicit Logger(Sink& sink,
                     Level initialLevel = Level::Info,
                     size_t capacity = 0);
     ~Logger();
