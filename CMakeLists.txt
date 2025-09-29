@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.20)
 project(QLog LANGUAGES CXX VERSION 0.1.0)
 
 # Options
-option(QLOG_BUILD_TESTS "Build QLog unit tests" ON)
+option(QLOG_BUILD_TESTS "Build QLog unit tests" OFF)
 
 # Set C++ standard
 set(CMAKE_CXX_STANDARD 17)
