@@ -1,6 +1,6 @@
 # QLog
 
-A low-overhead, cross-platform, asynchronous logging library in C++ (C++20) using a background worker thread and STL. Built with CMake and tested with GoogleTest.
+A low-overhead, cross-platform, asynchronous logging library in C++ (C++17) using a background worker thread and STL. Built with CMake and tested with GoogleTest.
 
 ## Goals
 - Non-blocking log enqueue on the caller thread
